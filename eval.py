@@ -49,13 +49,13 @@ def parse_args(argv=None):
                         help='Use cuda to evaulate model')
     parser.add_argument('--fast_nms', default=True, type=str2bool,
                         help='Whether to use a faster, but not entirely correct version of NMS.')
-    parser.add_argument('--cross_class_nms', default=False, type=str2bool,
+    parser.add_argument('--cross_class_nms', default=True, type=str2bool, ## False -> Treu for only person class
                         help='Whether compute NMS cross-class or per-class.')
     parser.add_argument('--display_masks', default=True, type=str2bool,
                         help='Whether or not to display masks over bounding boxes')
-    parser.add_argument('--display_bboxes', default=True, type=str2bool,
+    parser.add_argument('--display_bboxes', default=False, type=str2bool,
                         help='Whether or not to display bboxes around masks')
-    parser.add_argument('--display_text', default=True, type=str2bool,
+    parser.add_argument('--display_text', default=False, type=str2bool,
                         help='Whether or not to display text (class [score])')
     parser.add_argument('--display_scores', default=True, type=str2bool,
                         help='Whether or not to display scores in addition to classes')
@@ -132,7 +132,7 @@ coco_cats = {} # Call prep_coco_cats to fill this
 coco_cats_inv = {}
 color_cache = defaultdict(lambda: {})
 
-def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, mask_alpha=0.45, fps_str=''):
+def prep_display(dets_out, img, h, w, undo_transform=True, class_color=True, mask_alpha=1, fps_str=''): ### For Binarization : class_color= False -> True
     """
     Note: If undo_transform=False then im_h and im_w are allowed to be None.
     """
@@ -206,7 +206,7 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
             masks_color_cumul = masks_color[1:] * inv_alph_cumul
             masks_color_summand += masks_color_cumul.sum(dim=0)
 
-        img_gpu = img_gpu * inv_alph_masks.prod(dim=0) + masks_color_summand
+        img_gpu = img_gpu * inv_alph_masks.prod(dim=0)* 0 + masks_color_summand 
     
     if args.display_fps:
             # Draw the box for the fps on the GPU
@@ -236,11 +236,11 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
     if args.display_text or args.display_bboxes:
         for j in reversed(range(num_dets_to_consider)):
             x1, y1, x2, y2 = boxes[j, :]
-            color = get_color(j)
+            color = (0,0,0) ### color = black
             score = scores[j]
 
             if args.display_bboxes:
-                cv2.rectangle(img_numpy, (x1, y1), (x2, y2), color, 1)
+                cv2.rectangle(img_numpy, (x1, y1), (x2, y2), (0,0,0), 1) ### bbox_color = (0,0,0) & 1 -> -1 for Silhouette Image
 
             if args.display_text:
                 _class = cfg.dataset.class_names[classes[j]]
@@ -258,7 +258,6 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
                 cv2.rectangle(img_numpy, (x1, y1), (x1 + text_w, y1 - text_h - 4), color, -1)
                 cv2.putText(img_numpy, text_str, text_pt, font_face, font_scale, text_color, font_thickness, cv2.LINE_AA)
             
-    
     return img_numpy
 
 def prep_benchmark(dets_out, h, w):
@@ -1103,5 +1102,3 @@ if __name__ == '__main__':
             net = net.cuda()
 
         evaluate(net, dataset)
-
-

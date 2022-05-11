@@ -81,6 +81,9 @@ class Detect(object):
     def detect(self, batch_idx, conf_preds, decoded_boxes, mask_data, inst_data):
         """ Perform nms for only the max scoring class that isn't background (class 0) """
         cur_scores = conf_preds[batch_idx, 1:, :]
+        ### Scoring only Person[class ID = 0], at NMS Stage
+        cur_scores[1:] *= 0
+        ###
         conf_scores, _ = torch.max(cur_scores, dim=0)
 
         keep = (conf_scores > self.conf_thresh)
